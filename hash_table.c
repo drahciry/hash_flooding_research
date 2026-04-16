@@ -18,7 +18,7 @@ typedef struct {
 
 bool isPrime(unsigned long long num) {
     if (num == 1) return false;
-    for (unsigned long long divisor = 0; divisor * divisor <= num; divisor++)
+    for (unsigned long long divisor = 2; divisor * divisor <= num; divisor++)
         if (num % divisor == 0) return false;
     return true;
 }
@@ -214,3 +214,22 @@ int main() {
 
     return 0;
 }
+
+// int main() {
+//     HashTable* hash_table = createHashTable(10);
+
+//     insertItem(hash_table, "usuario", 1413914);
+//     insertItem(hash_table, "senha_segura", 12345);
+//     insertItem(hash_table, "data_nasc", 20050104);
+
+//     int item;
+//     getItem(hash_table, "senha_segura", &item);
+//     printf("Senha segura: %d\n", item);
+
+//     deleteItem(hash_table, "senha_segura");
+//     insertItem(hash_table, "senha_segura", 12345);
+
+//     deleteHashTable(hash_table);
+
+//     return 0;
+// }
