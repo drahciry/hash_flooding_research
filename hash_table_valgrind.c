@@ -189,28 +189,20 @@ bool deleteItem(HashTable* hash_table, char* key) {
 }
 
 int main() {
-    HashTable* hash_table = createHashTable(70000);
+    HashTable* hash_table = createHashTable(10);
 
-    FILE* file = fopen("colisoes.txt", "r");
-    if (file == NULL) { 
-        printf("Erro ao abrir arquivo.\n");
-        return 1;
-    }
+    insertItem(hash_table, "usuario", 1413914);
+    insertItem(hash_table, "senha_segura", 12345);
+    insertItem(hash_table, "data_nasc", 20050104);
 
-    printf("Início das inserções.\n");
+    int item;
+    getItem(hash_table, "senha_segura", &item);
+    printf("Senha segura: %d\n", item);
 
-    char buffer[50];
-    for (int i = 0; i < 65536; i++) {
-        if (fgets(buffer, sizeof(buffer), file) == NULL) break;
-        buffer[strcspn(buffer, "\n")] = '\0';
-        insertItem(hash_table, buffer, i);
-    }
+    deleteItem(hash_table, "senha_segura");
+    insertItem(hash_table, "senha_segura", 12345);
 
-    printf("Total de insercoes: %lld\n", hash_table->inserteds);
-
-    fclose(file);
     deleteHashTable(hash_table);
-    hash_table = NULL;
 
     return 0;
 }
