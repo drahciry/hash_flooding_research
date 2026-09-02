@@ -9,7 +9,6 @@
 
 #define EMPTY 0
 #define OCCUPIED 1
-#define DELETED 2
 
 typedef struct {
     uint64_t* coefficients;
@@ -19,7 +18,7 @@ typedef struct {
 typedef struct Node {
     uint8_t* key;
     uint64_t item;
-    Node* next;
+    struct Node* next;
 } Node;
 
 typedef struct {
@@ -58,7 +57,7 @@ HashTable* ht_create(size_t initial_capacity) {
     hash_table->size = 0;
     hash_table->capacity = initial_capacity;
 
-    hash_table->buckets = (Node**)malloc(hash_table->capacity * sizeof(Node*));
+    hash_table->buckets = (Node**)calloc(hash_table->capacity, sizeof(Node*));
     hash_table->status = (uint8_t*)calloc(hash_table->capacity, sizeof(uint8_t));
     if (!hash_table->buckets || !hash_table->status) {
         if (hash_table->buckets) free(hash_table->buckets);
@@ -118,6 +117,90 @@ uint32_t cw_hash(CarterWegmanHasher* hasher, const uint8_t* data, size_t len) {
     return (uint32_t)accum;
 }
 
+bool insertItem(HashTable* hash_table, const uint8_t* key, uint64_t item) {
+    double loadFactor = (double)hash_table->size / hash_table->capacity;
+    if (loadFactor >= 0.75) {};
+
+    size_t len = strlen(key);
+    uint32_t raw_hash = cw_hash(hash_table->hasher, key, len);
+    size_t index = raw_hash % hash_table->capacity;
+    if (!index) return false;
+
+    Node** current = &(hash_table->buckets[index]);
+    while (*current) {
+        if (!strncmp((*current)->key, key, len)) {
+            (*current)->item = item;
+            return true;
+        }
+        current = &((*current)->next);
+    }
+
+    *current = (Node*)malloc(sizeof(Node));
+    if (!(*current)) return false; 
+
+    Node* newNode = *current;
+    newNode->key = strdup(key);
+    newNode->item = item;
+    newNode->next = NULL;
+
+    hash_table->size++;
+    hash_table->status[index] = OCCUPIED;
+
+    return true;
+}
+
+void freeNode(Node* node) {
+    free(node->key);
+    free(node);
+}
+
+bool deleteItem(HashTable* hash_table, const uint8_t* key) {
+    size_t len = strlen(key);
+    uint32_t raw_hash = cw_hash(hash_table->hasher, key, len);
+    size_t index = raw_hash % hash_table->capacity;
+    if (!index) return false;
+
+    if (hash_table->status[index] == EMPTY)
+        return false;
+
+    Node** current = &(hash_table->buckets[index]);
+    while (*current) {
+        if (!strncmp((*current)->key, key, len)) {
+            Node* temp = *current;
+            *current = temp->next;
+            freeNode(temp);
+            hash_table->size--;
+            if (!hash_table->buckets[index])
+                hash_table->status[index] = EMPTY;
+            return true;
+        }
+        current = &((*current)->next);
+    }
+
+    return false;
+}
+
+bool getItem(HashTable* hash_table, const uint8_t* key, uint64_t* out_item) {
+    size_t len = strlen(key);
+    uint32_t raw_hash = cw_hash(hash_table->hasher, key, len);
+    size_t index = raw_hash % hash_table->capacity;
+    if (!index) return false;
+
+    if (hash_table->status[index] == EMPTY)
+        return false;
+
+    Node** current = &(hash_table->buckets[index]);
+    while (*current) {
+        if (!strncmp((*current)->key, key, len)) {
+            *out_item = (*current)->item;
+            return true;
+        }
+        current = &((*current)->next);
+    }
+
+    return false;
+}
+
 void cw_destroy(CarterWegmanHasher* hasher) {
     if (hasher) {
         free(hasher->coefficients);
@@ -131,7 +214,7 @@ void buckets_destroy(HashTable* hash_table) {
             Node* current = hash_table->buckets[i];
             while (current) {
                 Node* next = current->next;
-                free(current);
+                freeNode(current);
                 current = next;
             }
         }
@@ -146,4 +229,32 @@ void ht_destroy(HashTable* hash_table) {
         free(hash_table->status);
         free(hash_table);
     }
+}
+
+int main(int argc, char* argv[]) {
+    HashTable* hash_table = ht_create(47);
+
+    insertItem(hash_table, "chave1", 1);
+    insertItem(hash_table, "chave2", 2);
+    insertItem(hash_table, "chave3", 3);
+    insertItem(hash_table, "chave4", 4);
+
+    uint64_t item;
+    if (getItem(hash_table, "chave2", &item))
+        printf("Chave encontrada: %d\n", item);
+    else
+        printf("Chave nao encontrada\n");
+
+    deleteItem(hash_table, "chave2");
+    deleteItem(hash_table, "chave4");
+
+    if (getItem(hash_table, "chave2", &item))
+        printf("Chave encontrada: %d\n", item);
+    else
+        printf("Chave nao encontrada\n");
+
+    ht_destroy(hash_table);
+    hash_table = NULL;
+
+    return 0;
 }
