@@ -139,7 +139,7 @@ void ht_destroy(HashTable* hash_table) {
 CarterWegmanHasher* cw_create(size_t initial_capacity) {
     CarterWegmanHasher* hasher = (CarterWegmanHasher*)malloc(sizeof(CarterWegmanHasher));
     if (!hasher) return NULL;
-    
+
     hasher->coefficients = (uint64_t*)malloc(initial_capacity * sizeof(uint64_t));
     if (!hasher->coefficients) {
         free(hasher);
@@ -218,7 +218,7 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
 
 bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t* raw_hash) {
     if (len == 0) return false;
-    
+
     if (!ensure_capacity(hasher, len)) {
         fprintf(stderr, "Allocation memory error to expand coefficients.\n");
         return false;
@@ -227,7 +227,7 @@ bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t*
     uint64_t accum = hasher->constant_b;
     for (size_t i = 0; i < len; i++)
         accum += hasher->coefficients[i] * (uint8_t)data[i];
-    
+
     *raw_hash = (uint32_t)(accum % PRIME);
     return true;
 }
@@ -262,7 +262,7 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
 
     size_t len = strlen(key);
     if (len == 0 || len > MAX_KEY_LENGTH) return false;
-    
+
     uint32_t raw_hash;
     if (!cw_hash(hash_table->hasher, key, len, &raw_hash))
         return false;
@@ -278,7 +278,7 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
     }
 
     *current = (Node*)malloc(sizeof(Node));
-    if (!(*current)) return false; 
+    if (!(*current)) return false;
 
     Node* newNode = *current;
 
@@ -356,9 +356,9 @@ int main() {
     insertItem(hash_table, "secure_password", 12345);
     insertItem(hash_table, "born_date", 20050104);
 
-    int item;
+    uint64_t item;
     getItem(hash_table, "secure_password", &item);
-    printf("Secure password: %d\n", item);
+    printf("Secure password: %lu\n", item);
 
     deleteItem(hash_table, "secure_password");
     insertItem(hash_table, "secure_password", 12345);
