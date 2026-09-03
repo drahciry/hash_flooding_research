@@ -2,20 +2,28 @@
  * Important Includes
  */
 
-#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+    #include <windows.h>
+    #include <bcrypt.h>
+    #pragma comment(lib, "bcrypt.lib")
+#else
+    #include <sys/random.h>
+#endif
+
 /**
  * Macro definitions
  */
 
-#define PRIME 4294967291ULL
-#define DEFAULT_KEY_LENGTH 64
-#define LOAD_FACTOR_THRESHOLD 0.75
+#define PRIME 4294967291ULL // Higher prime number before 2^32
+#define DEFAULT_KEY_LENGTH 64 // default length to Carter Wegman Coefficients
+#define MAX_KEY_LENGTH 1048576 // 1MB limit to prevent uint64_t overflow in cw_hash
+#define LOAD_FACTOR_THRESHOLD 0.75 // load factor to measure if will be necessary expands
 
 /**
  * Structs definitions:
@@ -47,7 +55,8 @@ typedef struct {
  * Auxiliary functions:
  *     - isPrime: returns if a number is prime
  *     - nextPrime: returns next prime based on entry
- *     - freeNode: free memory with Node struct
+ *     - generate_secure_uint64: PRNG based on Operational System
+ *     - node_destroy: free memory with Node struct
  *     - cw_destroy: free memory with Carter Wegman Hasher struct
  *     - buckest_destroy: free all memory with Node struct
  *     - ht_destroy: free memory with Hash Table struct
@@ -77,7 +86,22 @@ int64_t nextPrime(int64_t num) {
     return prime;
 }
 
-void freeNode(Node* node) {
+bool generate_secure_uint64(uint64_t* out_val) {
+#ifdef _WIN32
+    NTSTATUS status = BCryptGenRandom(
+        NULL,
+        (PUCHAR)out_val,
+        sizeof(uint64_t),
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+    return (status == 0);
+#else
+    ssize_t result = getrandom(out_val, sizeof(uint64_t), GRND_NONBLOCK);
+    return (result == sizeof(uint64_t));
+#endif
+}
+
+void node_destroy(Node* node) {
     free(node->key);
     free(node);
 }
@@ -91,11 +115,11 @@ void cw_destroy(CarterWegmanHasher* hasher) {
 
 void buckets_destroy(HashTable* hash_table) {
     for (size_t i = 0; i < hash_table->capacity; i++) {
-        if (hash_table->buckets[i] != NULL) {
+        if (hash_table->buckets[i]) {
             Node* current = hash_table->buckets[i];
             while (current) {
                 Node* next = current->next;
-                freeNode(current);
+                node_destroy(current);
                 current = next;
             }
         }
@@ -123,8 +147,8 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     hasher->capacity = initial_capacity;
 
     for (size_t i = 0; i < initial_capacity; i++) {
-        uint64_t high = rand();
-        uint64_t low = rand();
+        uint64_t high; generate_secure_uint64(&high);
+        uint64_t low; generate_secure_uint64(&low);
         uint64_t val = (high << 32) | low;
         hasher->coefficients[i] = val % PRIME;
     }
@@ -230,6 +254,9 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
     if (loadFactor >= LOAD_FACTOR_THRESHOLD) rehash(hash_table);
 
     uint32_t raw_hash;
+    size_t len = strlen(key);
+    if (len > MAX_KEY_LENGTH) return false;
+
     if (!cw_hash(hash_table->hasher, key, strlen(key), &raw_hash))
         return false;
     size_t index = raw_hash % hash_table->capacity;
@@ -247,7 +274,14 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
     if (!(*current)) return false; 
 
     Node* newNode = *current;
+
     newNode->key = strdup(key);
+    if (!newNode->key) {
+        free(newNode);
+        *current = NULL;
+        return false;
+    }
+
     newNode->item = item;
     newNode->hash = raw_hash;
     newNode->next = NULL;
@@ -271,7 +305,7 @@ bool deleteItem(HashTable* hash_table, const char* key) {
         if ((*current)->hash == raw_hash && !strcmp((*current)->key, key)) {
             Node* temp = *current;
             *current = temp->next;
-            freeNode(temp);
+            node_destroy(temp);
             hash_table->size--;
             return true;
         }
