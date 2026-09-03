@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 
 #define EMPTY 0
@@ -8,23 +8,23 @@
 #define DELETED 2
 
 typedef struct {
-    char** keys;   
-    int* items;    
-    char* status;  
-    int R;         
-    int size;      
-    int inserteds; 
+    char** keys;
+    int* items;
+    char* status;
+    unsigned long long R;
+    unsigned long long size;
+    unsigned long long inserteds;
 } HashTable;
 
-bool isPrime(int num) {
+bool isPrime(unsigned long long num) {
     if (num == 1) return false;
-    for (int divisor = 2; divisor * divisor <= num; divisor++)
+    for (unsigned long long divisor = 2; divisor * divisor <= num; divisor++)
         if (num % divisor == 0) return false;
     return true;
 }
 
-int primeBefore(int size) {
-    int prime = size - 1;
+unsigned long long primeBefore(unsigned long long size) {
+    unsigned long long prime = size - 1;
     while (prime > 2) {
         if (isPrime(prime))
             return prime;
@@ -33,8 +33,8 @@ int primeBefore(int size) {
     return 2;
 }
 
-int primeAfter(int size) {
-    int prime = size + 1;
+unsigned long long primeAfter(unsigned long long size) {
+    unsigned long long prime = size + 1;
     while (true) {
         if (isPrime(prime))
             return prime;
@@ -42,128 +42,28 @@ int primeAfter(int size) {
     }
 }
 
-unsigned long djb2Hash(unsigned char* str) {
-    unsigned long hash = 5381;
+unsigned long long djb2(unsigned char* str) {
+    unsigned long long hash = 5381;
     int c;
     while ((c = *str++)) hash = ((hash << 5) + hash) + c;
     return hash;
 }
 
-int hash1(HashTable* hash_table, char* key) {
-    unsigned long k = djb2Hash((unsigned char*)key);
+unsigned long long hash1(HashTable* hash_table, char* key) {
+    unsigned long long k = djb2((unsigned char*)key);
     return (k % hash_table->size);
 }
 
-int hash2(HashTable* hash_table, char* key) {
-    unsigned long k = djb2Hash((unsigned char*)key);
+unsigned long long hash2(HashTable* hash_table, char* key) {
+    unsigned long long k = djb2((unsigned char*)key);
     return (hash_table->R - (k % hash_table->R));
 }
 
-int doubleHash(HashTable* hash_table, char* key, int attempt) {
+unsigned long long doubleHash(HashTable* hash_table, char* key, unsigned long long attempt) {
     return ((hash1(hash_table, key) + attempt * hash2(hash_table, key)) % hash_table->size);
 }
 
-void insertItemInternal(HashTable* hash_table, char* key, int item, bool isRehashing);
-
-void rehash(HashTable* hash_table) {
-    int old_size = hash_table->size;
-    int new_size = primeAfter(old_size * 2);
-
-    char** old_keys = hash_table->keys;
-    int* old_items = hash_table->items;
-    char* old_status = hash_table->status;
-
-    hash_table->size = new_size;
-    hash_table->R = primeBefore(new_size);
-    hash_table->inserteds = 0;
-
-    hash_table->keys = (char**)calloc(hash_table->size, sizeof(char*));
-    hash_table->items = (int*)malloc(hash_table->size * sizeof(int));
-    hash_table->status = (char*)calloc(hash_table->size, sizeof(char));
-
-    for (int i = 0; i < old_size; i++) {
-        if (old_status[i] == OCCUPIED)
-            insertItemInternal(hash_table, old_keys[i], old_items[i], true);
-        else if (old_status[i] == DELETED)
-            free(old_keys[i]);
-    }
-
-    free(old_keys);
-    free(old_items);
-    free(old_status);
-}
-
-void insertItemInternal(HashTable* hash_table, char* key, int item, bool isRehashing) {
-    float loadFactor = (float)hash_table->inserteds / hash_table->size;
-    if (loadFactor >= 0.75)
-        rehash(hash_table);
-
-    int hashDeleted = -1;
-    int hash;
-
-    for (int attempt = 0; attempt < hash_table->size; attempt++) {
-        hash = doubleHash(hash_table, key, attempt);
-        if (hash_table->status[hash] == EMPTY) {
-            break;
-        } else if (hash_table->status[hash] == OCCUPIED) {
-            if (strcmp(key, hash_table->keys[hash]) == 0) {
-                hash_table->items[hash] = item;
-                if (isRehashing) free(key);
-                return;
-            }
-        } else {
-            if (hashDeleted == -1) hashDeleted = hash;
-        }
-    }
-
-    if (hashDeleted != -1) {
-        hash = hashDeleted;
-        free(hash_table->keys[hash]);
-        hash_table->keys[hash] = NULL;
-    }
-
-    if (isRehashing)
-        hash_table->keys[hash] = key;
-    else
-        hash_table->keys[hash] = strdup(key);
-
-    hash_table->items[hash] = item;
-    hash_table->status[hash] = OCCUPIED;
-    hash_table->inserteds++;
-}
-
-void insertItem(HashTable* hash_table, char* key, int item) {
-    insertItemInternal(hash_table, key, item, false);
-}
-
-bool getItem(HashTable* hash_table, char* key, int* out_item) {
-    for (int attempt = 0; attempt < hash_table->size; attempt++) {
-        int hash = doubleHash(hash_table, key, attempt);
-        if (hash_table->status[hash] == EMPTY) {
-            return false;
-        } else if ((hash_table->status[hash] == OCCUPIED) && (strcmp(key, hash_table->keys[hash]) == 0)) {
-            *out_item = hash_table->items[hash];
-            return true;
-        }
-    }
-    return false;
-}
-
-bool deleteItem(HashTable* hash_table, char* key) {
-    for (int attempt = 0; attempt < hash_table->size; attempt++) {
-        int hash = doubleHash(hash_table, key, attempt);
-        if (hash_table->status[hash] == EMPTY) {
-            return false;
-        } else if ((hash_table->status[hash] == OCCUPIED) && (strcmp(key, hash_table->keys[hash]) == 0)) {
-            hash_table->status[hash] = DELETED;
-            hash_table->inserteds--;
-            return true;
-        }
-    }
-    return false;
-}
-
-HashTable* createHashTable(int size) {
+HashTable* createHashTable(unsigned long long size) {
     HashTable* hash_table = (HashTable*)malloc(sizeof(HashTable));
     if (hash_table) {
         hash_table->inserteds = 0;
@@ -177,7 +77,7 @@ HashTable* createHashTable(int size) {
 }
 
 void deleteHashTable(HashTable* hash_table) {
-    for (int i = 0; i < hash_table->size; i++)
+    for (unsigned long long i = 0; i < hash_table->size; i++)
         if (hash_table->keys[i] != NULL)
             free(hash_table->keys[i]);
     free(hash_table->keys);
@@ -186,29 +86,123 @@ void deleteHashTable(HashTable* hash_table) {
     free(hash_table);
 }
 
+void insertItemInternal(HashTable* hash_table, char* key, int item, bool isRehashing);
+
+void rehash(HashTable* hash_table) {
+    unsigned long long old_size = hash_table->size;
+    unsigned long long new_size = primeAfter(old_size * 2);
+
+    char** old_keys = hash_table->keys;
+    int* old_items = hash_table->items;
+    char* old_status = hash_table->status;
+
+    hash_table->size = new_size;
+    hash_table->R = primeBefore(hash_table->size);
+    hash_table->inserteds = 0;
+
+    hash_table->keys = (char**)calloc(hash_table->size, sizeof(char*));
+    hash_table->items = (int*)malloc(hash_table->size * sizeof(int));
+    hash_table->status = (char*)calloc(hash_table->size, sizeof(char));
+
+    for (unsigned long long i = 0; i < old_size; i++) {
+        if (old_status[i] == OCCUPIED)
+            insertItemInternal(hash_table, old_keys[i], old_items[i], true);
+        else if (old_status[i] == DELETED)
+            free(old_keys[i]);
+    }
+
+    free(old_keys);
+    free(old_items);
+    free(old_status);
+}
+
+void insertItemInternal(HashTable* hash_table, char* key, int item, bool isRehashing) {
+    double loadFactor = (double)hash_table->inserteds / hash_table->size;
+    if (loadFactor >= 0.75)
+        rehash(hash_table);
+
+    unsigned long long hash;
+    unsigned long long deletedHash;
+    bool findDeletedHash = false;
+    for (unsigned long long attempt = 0; attempt < hash_table->size; attempt++) {
+        hash = doubleHash(hash_table, key, attempt);
+        if (hash_table->status[hash] == EMPTY) {
+            break;
+        } else if (hash_table->status[hash] == OCCUPIED) {
+            if (strcmp(key, hash_table->keys[hash]) == 0) {
+                hash_table->items[hash] = item;
+                if (isRehashing) free(key);
+                return;
+            }
+        } else {
+            if (!findDeletedHash) {
+                findDeletedHash = true;
+                deletedHash = hash;
+            }
+        }
+    }
+
+    if (findDeletedHash) {
+        hash = deletedHash;
+        free(hash_table->keys[hash]);
+    }
+
+    if (isRehashing)
+        hash_table->keys[hash] = key;
+    else
+        hash_table->keys[hash] = strdup(key);
+
+    hash_table->inserteds++;
+    hash_table->items[hash] = item;
+    hash_table->status[hash] = OCCUPIED;
+}
+
+void insertItem(HashTable* hash_table, char* key, int item) {
+    insertItemInternal(hash_table, key, item, false);
+}
+
+bool getItem(HashTable* hash_table, char* key, int* out_item) {
+    for (unsigned long long attempt = 0; attempt < hash_table->size; attempt++) {
+        unsigned long long hash = doubleHash(hash_table, key, attempt);
+        if (hash_table->status[hash] == EMPTY) {
+            return false;
+        } else if ((hash_table->status[hash] == OCCUPIED) && (strcmp(key, hash_table->keys[hash]) == 0)) {
+            *out_item = hash_table->items[hash];
+            return true;
+        }
+    }
+    return false;
+}
+
+bool deleteItem(HashTable* hash_table, char* key) {
+    for (unsigned long long attempt = 0; attempt < hash_table->size; attempt++) {
+        unsigned long long hash = doubleHash(hash_table, key, attempt);
+        if (hash_table->status[hash] == EMPTY) {
+            return false;
+        } else if ((hash_table->status[hash] == OCCUPIED) && (strcmp(key, hash_table->keys[hash]) == 0)) {
+            hash_table->status[hash] == DELETED;
+            hash_table->inserteds--;
+            return true;
+        }
+    }
+    return false;
+}
+
 int main() {
-    HashTable* hash_table = createHashTable(70000);
+    HashTable* hash_table = createHashTable(10);
 
-    FILE* file = fopen("colisoes.txt", "r");
-    if (file == NULL) { 
-        printf("Erro ao abrir arquivo.\n");
-        return 1;
-    }
+    insertItem(hash_table, "user", 1413914);
+    insertItem(hash_table, "secure_password", 12345);
+    insertItem(hash_table, "born_date", 20050104);
 
-    printf("Início das inserções.\n");
+    int item;
+    getItem(hash_table, "secure_password", &item);
+    printf("Secure password: %d\n", item);
 
-    char buffer[50];
-    for (int i = 0; i < 65536; i++) {
-        if (fgets(buffer, sizeof(buffer), file) == NULL) break;
-        buffer[strcspn(buffer, "\n")] = '\0';
-        insertItem(hash_table, buffer, i);
-    }
+    deleteItem(hash_table, "secure_password");
+    insertItem(hash_table, "secure_password", 12345);
 
-    printf("Total de insercoes: %d\n", hash_table->inserteds);
-
-    fclose(file);
     deleteHashTable(hash_table);
-    hash_table = NULL;
 
     return 0;
 }
