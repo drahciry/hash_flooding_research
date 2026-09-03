@@ -33,6 +33,7 @@
  */
 
 typedef struct {
+    uint64_t constant_b;
     uint64_t* coefficients;
     size_t capacity;
 } CarterWegmanHasher;
@@ -80,7 +81,7 @@ int64_t nextPrime(int64_t num) {
 
     int64_t prime = num;
 
-    while (!nextPrime(prime))
+    while (!isPrime(prime))
         prime++;
 
     return prime;
@@ -147,11 +148,18 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     hasher->capacity = initial_capacity;
 
     for (size_t i = 0; i < initial_capacity; i++) {
-        uint64_t high; generate_secure_uint64(&high);
-        uint64_t low; generate_secure_uint64(&low);
-        uint64_t val = (high << 32) | low;
+        uint64_t val = 0;
+        if (!generate_secure_uint64(&val)) {
+            cw_destroy(hasher);
+            return NULL;
+        }
         hasher->coefficients[i] = val % PRIME;
     }
+
+    if (!generate_secure_uint64(&hasher->constant_b)) {
+        cw_destroy(hasher);
+        return NULL;
+    };
 
     return hasher;
 }
@@ -190,9 +198,8 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
     hasher->coefficients = new_coeffs;
 
     for (size_t i = hasher->capacity; i < new_capacity; i++) {
-        uint64_t high = rand();
-        uint64_t low = rand();
-        uint64_t val = (high << 32) | low;
+        uint64_t val = 0;
+        if (!generate_secure_uint64(&val)) val = 1;
         hasher->coefficients[i] = val % PRIME;
     }
 
@@ -217,7 +224,7 @@ bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t*
         return false;
     }
 
-    uint64_t accum = 0;
+    uint64_t accum = hasher->constant_b;
     for (size_t i = 0; i < len; i++)
         accum += hasher->coefficients[i] * (uint8_t)data[i];
     
@@ -253,11 +260,11 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
     double loadFactor = (double)hash_table->size / hash_table->capacity;
     if (loadFactor >= LOAD_FACTOR_THRESHOLD) rehash(hash_table);
 
-    uint32_t raw_hash;
     size_t len = strlen(key);
-    if (len > MAX_KEY_LENGTH) return false;
-
-    if (!cw_hash(hash_table->hasher, key, strlen(key), &raw_hash))
+    if (len == 0 || len > MAX_KEY_LENGTH) return false;
+    
+    uint32_t raw_hash;
+    if (!cw_hash(hash_table->hasher, key, len, &raw_hash))
         return false;
     size_t index = raw_hash % hash_table->capacity;
 
@@ -292,8 +299,11 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
 }
 
 bool deleteItem(HashTable* hash_table, const char* key) {
+    size_t len = strlen(key);
+    if (len == 0 || len > MAX_KEY_LENGTH) return false;
+
     uint32_t raw_hash;
-    if (!cw_hash(hash_table->hasher, key, strlen(key), &raw_hash))
+    if (!cw_hash(hash_table->hasher, key, len, &raw_hash))
         return false;
     size_t index = raw_hash % hash_table->capacity;
 
@@ -316,8 +326,11 @@ bool deleteItem(HashTable* hash_table, const char* key) {
 }
 
 bool getItem(HashTable* hash_table, const char* key, int64_t* out_item) {
+    size_t len = strlen(key);
+    if (len == 0 || len > MAX_KEY_LENGTH) return false;
+
     uint32_t raw_hash;
-    if (!cw_hash(hash_table->hasher, key, strlen(key), &raw_hash))
+    if (!cw_hash(hash_table->hasher, key, len, &raw_hash))
         return false;
     size_t index = raw_hash % hash_table->capacity;
 
