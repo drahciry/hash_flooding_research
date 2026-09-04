@@ -56,7 +56,8 @@ typedef struct {
  * Auxiliary functions:
  *     - isPrime: returns if a number is prime
  *     - nextPrime: returns next prime based on entry
- *     - generate_secure_uint64: PRNG based on Operational System
+ *     - generate_secure_uint64: PRNG based on OS to 64 bits constant
+ *     - generate_secure_bulk: PRNG based on OS to bits block once
  *     - node_destroy: free memory with Node struct
  *     - cw_destroy: free memory with Carter Wegman Hasher struct
  *     - buckest_destroy: free all memory with Node struct
@@ -102,6 +103,23 @@ bool generate_secure_uint64(uint64_t* out_val) {
 #endif
 }
 
+bool generate_secure_bulk(uint64_t* array, size_t count) {
+    size_t total_bytes = count * sizeof(uint64_t);
+
+#ifdef _WIN32
+    NTSTATUS status = BCryptGenRandom(
+        NULL,
+        (PURCHAR)array,
+        total_bytes,
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+    return (status == 0);
+#else
+    ssize_t result = getrandom(array, total_bytes, GRND_NONBLOCK);
+    return (result == (ssize_t)total_bytes);
+#endif
+}
+
 void node_destroy(Node* node) {
     free(node->key);
     free(node);
@@ -139,7 +157,7 @@ void ht_destroy(HashTable* hash_table) {
 CarterWegmanHasher* cw_create(size_t initial_capacity) {
     CarterWegmanHasher* hasher = (CarterWegmanHasher*)malloc(sizeof(CarterWegmanHasher));
     if (!hasher) return NULL;
-
+    
     hasher->coefficients = (uint64_t*)malloc(initial_capacity * sizeof(uint64_t));
     if (!hasher->coefficients) {
         free(hasher);
@@ -147,14 +165,13 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     }
     hasher->capacity = initial_capacity;
 
-    for (size_t i = 0; i < initial_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) {
-            cw_destroy(hasher);
-            return NULL;
-        }
-        hasher->coefficients[i] = val % PRIME;
+    if (!generate_secure_bulk(hasher->coefficients, hasher->capacity)) {
+        cw_destroy(hasher);
+        return NULL;
     }
+
+    for (size_t i = 0; i < initial_capacity; i++)
+        hasher->coefficients[i] %= PRIME;
 
     if (!generate_secure_uint64(&hasher->constant_b)) {
         cw_destroy(hasher);
@@ -194,13 +211,18 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
 
     uint64_t* new_coeffs = (uint64_t*)realloc(hasher->coefficients, new_capacity * sizeof(uint64_t));
     if (!new_coeffs) return false;
-
     hasher->coefficients = new_coeffs;
 
+    size_t new_elements = new_capacity - hasher->capacity;
+    uint64_t* new_memory_start = &hasher->coefficients[hasher->capacity];
+
+    if (!generate_secure_bulk(new_memory_start, new_elements)) {
+        for (size_t i = 0; i < new_elements; i++)
+            new_memory_start[i] = 1;
+    }
+
     for (size_t i = hasher->capacity; i < new_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) val = 1;
-        hasher->coefficients[i] = val % PRIME;
+        hasher->coefficients[i] %= PRIME;
     }
 
     hasher->capacity = new_capacity;
@@ -218,7 +240,7 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
 
 bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t* raw_hash) {
     if (len == 0) return false;
-
+    
     if (!ensure_capacity(hasher, len)) {
         fprintf(stderr, "Allocation memory error to expand coefficients.\n");
         return false;
@@ -227,7 +249,7 @@ bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t*
     uint64_t accum = hasher->constant_b;
     for (size_t i = 0; i < len; i++)
         accum += hasher->coefficients[i] * (uint8_t)data[i];
-
+    
     *raw_hash = (uint32_t)(accum % PRIME);
     return true;
 }
@@ -262,7 +284,7 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
 
     size_t len = strlen(key);
     if (len == 0 || len > MAX_KEY_LENGTH) return false;
-
+    
     uint32_t raw_hash;
     if (!cw_hash(hash_table->hasher, key, len, &raw_hash))
         return false;
@@ -278,7 +300,7 @@ bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
     }
 
     *current = (Node*)malloc(sizeof(Node));
-    if (!(*current)) return false;
+    if (!(*current)) return false; 
 
     Node* newNode = *current;
 
