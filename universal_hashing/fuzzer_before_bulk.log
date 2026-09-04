@@ -1,0 +1,52 @@
+[*] Generating 50000 payloads for Rehash Exhaustion...
+[*] Launching target process: ./fuzzer_target
+
+========================================
+          FUZZING CAMPAIGN END          
+========================================
+Total Payloads Sent : 50000
+Peak Latency (ms)   : 2.1930
+Structural Anomalies: 0
+========================================
+
+[*] Generating Max-Length payloads for CPU/Cache Starvation...
+[*] Launching target process: ./fuzzer_target
+[ANOMALY] OP:0 | SUCCESS:1 | TIME_MS:725.231000 | SIZE:1
+
+========================================
+          FUZZING CAMPAIGN END          
+========================================
+Total Payloads Sent : 50
+Peak Latency (ms)   : 725.2310
+Structural Anomalies: 1
+========================================
+
+[*] Generating Edge-Case payloads...
+[*] Launching target process: ./fuzzer_target
+[ANOMALY] OP:3 | SUCCESS:1 | TIME_MS:722.807000 | SIZE:3
+
+========================================
+          FUZZING CAMPAIGN END          
+========================================
+Total Payloads Sent : 4
+Peak Latency (ms)   : 722.8070
+Structural Anomalies: 1
+========================================
+
+[*] Generating Incremental Expansion payloads...
+[*] Launching target process: ./fuzzer_target
+[ANOMALY] OP:7 | SUCCESS:1 | TIME_MS:5.769000 | SIZE:8
+[ANOMALY] OP:8 | SUCCESS:1 | TIME_MS:11.337000 | SIZE:9
+[ANOMALY] OP:9 | SUCCESS:1 | TIME_MS:22.864000 | SIZE:10
+[ANOMALY] OP:10 | SUCCESS:1 | TIME_MS:45.578000 | SIZE:11
+[ANOMALY] OP:11 | SUCCESS:1 | TIME_MS:90.843000 | SIZE:12
+[ANOMALY] OP:12 | SUCCESS:1 | TIME_MS:182.754000 | SIZE:13
+
+========================================
+          FUZZING CAMPAIGN END          
+========================================
+Total Payloads Sent : 13
+Peak Latency (ms)   : 182.7540
+Structural Anomalies: 6
+========================================
+
