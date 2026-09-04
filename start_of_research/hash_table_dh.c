@@ -206,7 +206,7 @@ int main() {
         insertItem(hash_table, buffer, i);
     }
 
-    printf("Total inserts: %d\n", hash_table->inserteds);
+    printf("Total inserts: %lld\n", hash_table->inserteds);
 
     fclose(file);
     deleteHashTable(hash_table);
