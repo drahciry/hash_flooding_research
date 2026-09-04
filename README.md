@@ -1,6 +1,6 @@
 # Hash Flooding Research & Mitigation
 
-This repository contains research, proofs-of-concept, and mitigation strategies regarding **Hash Flooding** (also known as Algorithmic Complexity Attacks). Hash flooding is a type of Denial of Service (DoS) attack where a malicious actor intentionally feeds data to an application that results in worst-case time complexity (from $O(1)$ to $O(N)$) in hash table operations, exhausting CPU resources.
+This repository contains research, proofs-of-concept, and mitigation strategies regarding **Hash Flooding** (also known as Algorithmic Complexity Attacks). Hash flooding is a type of Denial of Service (DoS) attack where a malicious actor intentionally feeds data to an application that results in worst-case time complexity (from $O(1)$ to $O(N)$ complexity) in hash table operations, exhausting CPU resources.
 
 ## Repository Structure
 
