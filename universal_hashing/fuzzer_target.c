@@ -59,7 +59,8 @@ typedef struct {
  * Auxiliary functions:
  *     - isPrime: returns if a number is prime
  *     - nextPrime: returns next prime based on entry
- *     - generate_secure_uint64: PRNG based on Operational System
+ *     - generate_secure_uint64: PRNG based on OS to 64 bits constant
+ *     - generate_secure_bulk: PRNG based on OS to bits block once
  *     - node_destroy: free memory with Node struct
  *     - cw_destroy: free memory with Carter Wegman Hasher struct
  *     - buckest_destroy: free all memory with Node struct
@@ -102,6 +103,23 @@ bool generate_secure_uint64(uint64_t* out_val) {
 #else
     ssize_t result = getrandom(out_val, sizeof(uint64_t), GRND_NONBLOCK);
     return (result == sizeof(uint64_t));
+#endif
+}
+
+bool generate_secure_bulk(uint64_t* array, size_t count) {
+    size_t total_bytes = count * sizeof(uint64_t);
+
+#ifdef _WIN32
+    NTSTATUS status = BCryptGenRandom(
+        NULL,
+        (PURCHAR)array,
+        total_bytes,
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+    return (status == 0);
+#else
+    ssize_t result = getrandom(array, total_bytes, GRND_NONBLOCK);
+    return (result == (ssize_t)total_bytes);
 #endif
 }
 
@@ -150,14 +168,13 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     }
     hasher->capacity = initial_capacity;
 
-    for (size_t i = 0; i < initial_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) {
-            cw_destroy(hasher);
-            return NULL;
-        }
-        hasher->coefficients[i] = val % PRIME;
+    if (!generate_secure_bulk(hasher->coefficients, hasher->capacity)) {
+        cw_destroy(hasher);
+        return NULL;
     }
+
+    for (size_t i = 0; i < initial_capacity; i++)
+        hasher->coefficients[i] %= PRIME;
 
     if (!generate_secure_uint64(&hasher->constant_b)) {
         cw_destroy(hasher);
@@ -197,13 +214,18 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
 
     uint64_t* new_coeffs = (uint64_t*)realloc(hasher->coefficients, new_capacity * sizeof(uint64_t));
     if (!new_coeffs) return false;
-
     hasher->coefficients = new_coeffs;
 
+    size_t new_elements = new_capacity - hasher->capacity;
+    uint64_t* new_memory_start = &hasher->coefficients[hasher->capacity];
+
+    if (!generate_secure_bulk(new_memory_start, new_elements)) {
+        for (size_t i = 0; i < new_elements; i++)
+            new_memory_start[i] = 1;
+    }
+
     for (size_t i = hasher->capacity; i < new_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) val = 1;
-        hasher->coefficients[i] = val % PRIME;
+        hasher->coefficients[i] %= PRIME;
     }
 
     hasher->capacity = new_capacity;
@@ -353,6 +375,8 @@ bool getItem(HashTable* hash_table, const char* key, int64_t* out_item) {
 }
 
 int main(int argc, char* argv[]) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     HashTable* table = ht_create(1024);
     if (!table) return 1;
 
@@ -370,8 +394,8 @@ int main(int argc, char* argv[]) {
 
         clock_t end_time = clock();
         double elapsed_ms = ((double)(end_time - start_time) / CLOCKS_PER_SEC) * 1000.0;
-        
-        printf("OP:%llu | SUCCESS:%d | TIME_MS:%f | SIZE:%zu\n",
+
+        printf("OP:%lu | SUCCESS:%d | TIME_MS:%f | SIZE:%zu\n",
                operation_count, success, elapsed_ms, table->size);
 
         operation_count++;
@@ -382,6 +406,6 @@ int main(int argc, char* argv[]) {
 
     ht_destroy(table);
     table = NULL;
-    
+
     return 0;
 }
