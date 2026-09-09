@@ -109,7 +109,7 @@ bool generate_secure_bulk(uint64_t* array, size_t count) {
 #ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(
         NULL,
-        (PURCHAR)array,
+        (PUCHAR)array,
         total_bytes,
         BCRYPT_USE_SYSTEM_PREFERRED_RNG
     );
