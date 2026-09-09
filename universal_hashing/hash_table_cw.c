@@ -221,9 +221,8 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
             new_memory_start[i] = 1;
     }
 
-    for (size_t i = hasher->capacity; i < new_capacity; i++) {
+    for (size_t i = hasher->capacity; i < new_capacity; i++)
         hasher->coefficients[i] %= PRIME;
-    }
 
     hasher->capacity = new_capacity;
     return true;

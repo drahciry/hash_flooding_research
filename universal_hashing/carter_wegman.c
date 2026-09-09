@@ -36,6 +36,23 @@ bool generate_secure_uint64(uint64_t* out_val) {
 #endif
 }
 
+bool generate_secure_bulk(uint64_t* array, size_t count) {
+    size_t total_bytes = count * sizeof(uint64_t);
+
+#ifdef _WIN32
+    NTSTATUS status = BCryptGenRandom(
+        NULL,
+        (PURCHAR)array,
+        total_bytes,
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+    return (status == 0);
+#else
+    ssize_t result = getrandom(array, total_bytes, GRND_NONBLOCK);
+    return (result == (ssize_t)total_bytes);
+#endif
+}
+
 void cw_destroy(CarterWegmanHasher* hasher) {
     if (hasher) {
         free(hasher->coefficients);
@@ -54,14 +71,13 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     }
     hasher->capacity = initial_capacity;
 
-    for (size_t i = 0; i < initial_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) {
-            cw_destroy(hasher);
-            return NULL;
-        }
-        hasher->coefficients[i] = val % PRIME;
+    if (!generate_secure_bulk(hasher->coefficients, hasher->capacity)) {
+        cw_destroy(hasher);
+        return NULL;
     }
+
+    for (size_t i = 0; i < initial_capacity; i++)
+        hasher->coefficients[i] %= PRIME;
 
     if (!generate_secure_uint64(&hasher->constant_b)) {
         cw_destroy(hasher);
@@ -80,14 +96,18 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
 
     uint64_t* new_coeffs = (uint64_t*)realloc(hasher->coefficients, new_capacity * sizeof(uint64_t));
     if (!new_coeffs) return false;
-
     hasher->coefficients = new_coeffs;
 
-    for (size_t i = hasher->capacity; i < new_capacity; i++) {
-        uint64_t val = 0;
-        if (!generate_secure_uint64(&val)) val = 1;
-        hasher->coefficients[i] = val % PRIME;
+    size_t new_elements = new_capacity - hasher->capacity;
+    uint64_t* new_memory_start = &hasher->coefficients[hasher->capacity];
+
+    if (!generate_secure_bulk(new_memory_start, new_elements)) {
+        for (size_t i = 0; i < new_elements; i++)
+            new_memory_start[i] = 1;
     }
+
+    for (size_t i = hasher->capacity; i < new_capacity; i++)
+        hasher->coefficients[i] %= PRIME;
 
     hasher->capacity = new_capacity;
     return true;
