@@ -1,24 +1,34 @@
-# Hash Flooding Research & Mitigation
+# Hash Flooding Attack and Universal Hashing Mitigation
 
-This repository contains research, proofs-of-concept, and mitigation strategies regarding **Hash Flooding** (also known as Algorithmic Complexity Attacks). Hash flooding is a type of Denial of Service (DoS) attack where a malicious actor intentionally feeds data to an application that results in worst-case time complexity (from $O(1)$ to $O(N)$ complexity) in hash table operations, exhausting CPU resources.
+## Overview
+This repository contains an architectural research project and Proof of Concept (PoC) focused on **Hash Flooding**, a classic Denial of Service (DoS) vulnerability. The project explores how deterministic hash table implementations can be maliciously manipulated to degrade algorithmic performance from $O(1)$ to $O(n)$, causing severe CPU exhaustion.
 
-## Repository Structure
+After establishing a vulnerable baseline using Double Hashing, the research implements a robust cryptographic mitigation using **Carter-Wegman Universal Hashing**, effectively shielding the data structure against predictable collision generation.
 
-The project is divided into distinct phases of research and testing:
+## Repository Architecture
+To ensure memory safety and maintain a modular, production-ready codebase, the repository is strictly divided:
 
-*   **`start_of_research/`**: Contains the initial implementations and scripts used to demonstrate the vulnerability. This includes collision generators (`generate_collisions.py`) and basic hash table implementations (`hash_table_dh.c`, `hash_table_dh_old.c`) susceptible to flooding attacks.
-*   **`universal_hashing/`**: Focuses on the core mitigation strategy utilizing Carter-Wegman universal hashing to introduce randomness into the hash function family, thereby rendering deterministic collision generation mathematically infeasible for an attacker.
-*   **`valgrind_tests/`**: Contains memory management validation and profiling tools to ensure the integrity of the implementations and guarantee the absence of memory leaks during high-load operations.
+* `include/`: Public API headers. Utilizes opaque pointers to enforce strict memory encapsulation and hide internal cryptographic states.
+* `src/`: Core C implementations of the algorithms, memory management, and entropy generation.
+* `docs/`: In-depth theoretical research, mathematical modeling, and memory auditing logs.
+* `tests/`: Fuzzing harnesses and memory stress-testing endpoints designed for Valgrind profiling.
+* `scripts/`: Python-based offensive tooling for payload generation and automated fuzzing orchestration.
 
-## Security & Threat Model Disclaimer
+## Build and Execution Instructions
+This project utilizes a `Makefile` to automate compilation with strict security flags (`-Wall -Wextra -g3 -O0`).
 
-**Important Note on Testing Utilities:** 
-This repository is a security research project. The core focus is strictly on the algorithmic complexity and resilience of the hash table data structures. 
+1. **Build all compilation targets:**
+   ```bash
+   make all
+   ```
+2. **Execute the fuzzer against the mitigated target:**
+   ```bash
+   ./bin/fuzzer < results/collisions.txt
+   ```
+3. **Clean build artifacts:**
+   ```bash
+   make clean
+   ```
 
-Certain files within this repository serve purely as local testing harnesses, fuzzers, and collision generation utilities (e.g., Python scripts and I/O reading blocks in C). These utilities may use standard input parsing functions (like `fgets`) to read testing payloads or collision text files (`collisions.txt`). 
-
-These I/O operations are **strictly out of scope** for the threat model of the hash table implementation itself. Any static analysis or vulnerability flags raised on standard I/O parsing within the testing environment do not reflect the security posture of the actual hash table algorithms being researched. The mitigation provided (such as Universal Hashing) operates entirely at the data structure level.
-
-## Getting Started
-
-To explore the research, it is recommended to start in the `start_of_research/` directory to understand how standard hash functions can be exploited, and then move to the `universal_hashing/` directory to analyze the Carter-Wegman mitigation.
+## Detailed Documentation
+For a deep dive into the mathematical foundation and technical engineering of each research phase, please refer to the detailed reports located in the `docs/` directory.

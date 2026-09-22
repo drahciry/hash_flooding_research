@@ -1,15 +1,15 @@
-# Build artifacts and compiled binaries
+# Build artifacts and binaries
 obj/
 bin/
 *.o
 *.out
 *.exe
 
-# Valgrind and memory profiling outputs
+# Memory profiling and Valgrind outputs
 vgcore.*
 callgrind.out.*
 
-# Python environment and cache
+# Python environment and cache (for the fuzzer scripts)
 __pycache__/
 *.pyc
 .venv/
