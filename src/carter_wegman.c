@@ -1,3 +1,4 @@
+#include "carter_wegman.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,14 +13,21 @@
     #include <sys/random.h>
 #endif
 
+/* 
+ * Private macros. These are ONLY visible inside this .c file.
+ */
 #define PRIME 4294967291ULL // Higher prime number before 2^32
 #define DEFAULT_KEY_LENGTH 64 // default length to Carter Wegman Coefficients
 
-typedef struct {
+/*
+ * Actual definition of the opaque pointer declared in the .h file.
+ * Droping the 'typedef' here to avoid compiler redefinition errors.
+ */
+struct CarterWegmanHasher {
     uint64_t constant_b;
     uint64_t* coefficients;
     size_t capacity;
-} CarterWegmanHasher;
+};
 
 bool generate_secure_uint64(uint64_t* out_val) {
 #ifdef _WIN32
@@ -61,7 +69,7 @@ void cw_destroy(CarterWegmanHasher* hasher) {
 }
 
 CarterWegmanHasher* cw_create(size_t initial_capacity) {
-    CarterWegmanHasher* hasher = (CarterWegmanHasher*)malloc(sizeof(CarterWegmanHasher));
+    CarterWegmanHasher* hasher = (CarterWegmanHasher*)malloc(sizeof(struct CarterWegmanHasher));
     if (!hasher) return NULL;
     
     hasher->coefficients = (uint64_t*)malloc(initial_capacity * sizeof(uint64_t));
@@ -87,7 +95,11 @@ CarterWegmanHasher* cw_create(size_t initial_capacity) {
     return hasher;
 }
 
-bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
+/* 
+ * Declared as 'static' to enforce internal linkage. 
+ * This function cannot be called from outside this file, protecting memory bounds.
+ */
+static bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
     if (required_capacity <= hasher->capacity) return true;
 
     uint64_t new_capacity = hasher->capacity << 1;
@@ -127,42 +139,4 @@ bool cw_hash(CarterWegmanHasher* hasher, const char* data, size_t len, uint32_t*
     
     *raw_hash = (uint32_t)(accum % PRIME);
     return true;
-}
-
-int main() {
-    printf("=================================================\n");
-    printf("   CARTER-WEGMAN UNIVERSAL HASHING DEMONSTRATE   \n");
-    printf("=================================================\n");
-
-    CarterWegmanHasher* hasher1 = cw_create(16);
-    CarterWegmanHasher* hasher2 = cw_create(16);
-
-    if (!hasher1 || !hasher2) {
-        printf("Error to initilize hashers.\n");
-        return 1;
-    }
-
-    uint32_t raw_hash;
-    const char* key1 = "Iniciacao_cientifica_2025";
-    const char* key2 = "Iniciacao_cientifica_2026";
-
-    printf("Key 1: '%s'\n", key1);
-    printf("Key 2: '%s'\n\n", key2);
-
-    printf("[Hasher 1 Instance] (Secret Key A)\n");
-    if (cw_hash(hasher1, key1, strlen(key1), &raw_hash))
-        printf("  -> Hash of '%s': %u\n", key1, raw_hash);
-    if (cw_hash(hasher1, key2, strlen(key2), &raw_hash))
-        printf("  -> Hash of '%s': %u\n\n", key2, raw_hash);
-
-    printf("[Hasher 2 Instance] (Secret Key B - New Initialization)\n");
-    if (cw_hash(hasher2, key1, strlen(key1), &raw_hash))
-        printf("  -> Hash of '%s': %u\n", key1, raw_hash);
-    if (cw_hash(hasher2, key2, strlen(key2), &raw_hash))
-        printf("  -> Hash of '%s': %u\n\n", key2, raw_hash);
-
-    cw_destroy(hasher1);
-    cw_destroy(hasher2);
-
-    return 0;
 }

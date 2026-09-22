@@ -221,8 +221,9 @@ bool ensure_capacity(CarterWegmanHasher* hasher, uint64_t required_capacity) {
             new_memory_start[i] = 1;
     }
 
-    for (size_t i = hasher->capacity; i < new_capacity; i++)
+    for (size_t i = hasher->capacity; i < new_capacity; i++) {
         hasher->coefficients[i] %= PRIME;
+    }
 
     hasher->capacity = new_capacity;
     return true;
@@ -368,4 +369,23 @@ bool getItem(HashTable* hash_table, const char* key, int64_t* out_item) {
     }
 
     return false;
+}
+
+int main() {
+    HashTable* hash_table = ht_create(10);
+
+    insertItem(hash_table, "user", 1413914);
+    insertItem(hash_table, "secure_password", 12345);
+    insertItem(hash_table, "born_date", 20050104);
+
+    uint64_t item;
+    getItem(hash_table, "secure_password", &item);
+    printf("Secure password: %lu\n", item);
+
+    deleteItem(hash_table, "secure_password");
+    insertItem(hash_table, "secure_password", 12345);
+
+    ht_destroy(hash_table);
+
+    return 0;
 }
