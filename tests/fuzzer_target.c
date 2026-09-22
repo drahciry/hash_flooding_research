@@ -32,6 +32,9 @@ int main(int argc, char* argv[]) {
      */
     setvbuf(stdout, NULL, _IONBF, 0);
 
+    /* Lock the Carter-Wegman coefficients to a known state for reproducibility */
+    cw_enable_deterministic(0xDEADBEEFCAFEBABE);
+
     /* Instantiate the target via the public API */
     HashTable* table = ht_create(1024);
     if (!table) {

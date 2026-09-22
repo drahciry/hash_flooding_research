@@ -51,6 +51,17 @@ bool generate_secure_uint64(uint64_t* out_val);
 bool generate_secure_bulk(uint64_t* array, size_t count);
 
 /**
+ * @brief Enables deterministic mode for fuzzing and reproducible tests.
+ * 
+ * Bypasses the OS secure entropy pool and uses a seeded PRNG (Xorshift64).
+ * WARNING: NEVER use this in a production environment, as it completely 
+ * defeats the Hash Flooding mitigation.
+ * 
+ * @param[in] seed The 64-bit seed to initialize the PRNG. Must not be 0.
+ */
+void cw_enable_deterministic(uint64_t seed);
+
+/**
  * @brief Allocates and initializes a new Carter-Wegman hashing context.
  * 
  * @param[in] initial_capacity The starting capacity for the internal 

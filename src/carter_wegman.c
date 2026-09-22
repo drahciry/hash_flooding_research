@@ -29,7 +29,36 @@ struct CarterWegmanHasher {
     size_t capacity;
 };
 
+/* 
+ * Internal state for deterministic fuzzing.
+ */
+static bool deterministic_mode = false;
+static uint64_t prng_state = 1; // Xorshift state must never be 0
+
+void cw_enable_deterministic(uint64_t seed) {
+    deterministic_mode = true;
+    prng_state = (seed == 0) ? 1 : seed;
+}
+
+/* 
+ * Simple, fast Xorshift64 algorithm to generate reproducible pseudo-randomness.
+ */
+static uint64_t get_pseudo_random() {
+    prng_state ^= prng_state << 13;
+    prng_state ^= prng_state >> 7;
+    prng_state ^= prng_state << 17;
+    return prng_state;
+}
+
+/* 
+ * Refactored Generation Functions to support the Seed 
+ */
 bool generate_secure_uint64(uint64_t* out_val) {
+    if (deterministic_mode) {
+        *out_val = get_pseudo_random();
+        return true;
+    }
+
 #ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(
         NULL,
@@ -45,8 +74,14 @@ bool generate_secure_uint64(uint64_t* out_val) {
 }
 
 bool generate_secure_bulk(uint64_t* array, size_t count) {
-    size_t total_bytes = count * sizeof(uint64_t);
+    if (deterministic_mode) {
+        for (size_t i = 0; i < count; i++) {
+            array[i] = get_pseudo_random();
+        }
+        return true;
+    }
 
+    size_t total_bytes = count * sizeof(uint64_t);
 #ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(
         NULL,

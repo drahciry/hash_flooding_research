@@ -1,0 +1,21 @@
+# Build artifacts and compiled binaries
+obj/
+bin/
+*.o
+*.out
+*.exe
+
+# Valgrind and memory profiling outputs
+vgcore.*
+callgrind.out.*
+
+# Python environment and cache
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Ignore all generated results logs, but keep the directory tracked
+results/*.log
+results/*.txt
+!results/.gitkeep
