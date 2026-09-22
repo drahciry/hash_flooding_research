@@ -32,3 +32,6 @@ This project utilizes a `Makefile` to automate compilation with strict security 
 
 ## Detailed Documentation
 For a deep dive into the mathematical foundation and technical engineering of each research phase, please refer to the detailed reports located in the `docs/` directory.
+
+## Acknowledgments & Authorship
+The core architecture, algorithms, and security implementations in this repository were authored entirely by me. Large Language Models (Google Gemini) were utilized strictly as writing assistants to format, standardize, and translate the Doxygen code comments and Markdown documentation into professional English.
