@@ -23,7 +23,7 @@ This project utilizes a `Makefile` to automate compilation with strict security 
    ```
 2. **Execute the fuzzer against the mitigated target:**
    ```bash
-   ./bin/fuzzer < results/collisions.txt
+   python3 -u ./scripts/fuzzer.py > ./results/fuzzer.log
    ```
 3. **Clean build artifacts:**
    ```bash
