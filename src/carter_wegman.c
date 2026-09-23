@@ -8,7 +8,9 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <bcrypt.h>
-    #pragma comment(lib, "bcrypt.lib")
+    #ifdef _MSC_VER
+        #pragma comment(lib, "bcrypt.lib")
+    #endif
 #else
     #include <sys/random.h>
 #endif

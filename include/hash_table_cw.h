@@ -93,4 +93,12 @@ bool deleteItem(HashTable* hash_table, const char* key);
  */
 bool getItem(HashTable* hash_table, const char* key, int64_t* out_item);
 
+/**
+ * @brief Retrieves the current number of elements in the hash table.
+ * 
+ * @param[in] hash_table Pointer to the hash table instance.
+ * @return size_t The number of items currently stored. Returns 0 if NULL.
+ */
+size_t ht_get_size(const HashTable* hash_table);
+
 #endif /* HASH_TABLE_CW_H */

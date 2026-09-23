@@ -4,7 +4,7 @@ import random
 import string
 import subprocess
 
-BINARY_PATH = "./fuzzer_target"
+BINARY_PATH = "./fuzzer.exe"
 MAX_KEY_LENGTH = 1048576
 REHASH_STRESS_COUNT = 50000
 

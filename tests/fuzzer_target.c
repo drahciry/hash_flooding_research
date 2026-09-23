@@ -23,7 +23,7 @@
  */
 #define MAX_INPUT_BUFFER 1048576 
 
-int main(int argc, char* argv[]) {
+int main() {
     /* 
      * Disable output buffering.
      * This is critical for fuzzing. If the program crashes (e.g., SegFault), 
@@ -65,13 +65,17 @@ int main(int argc, char* argv[]) {
         double elapsed_ms = ((double)(end_time - start_time) / CLOCKS_PER_SEC) * 1000.0;
 
         /* Output metrics back to the Python orchestrator */
-        printf("OP:%lu | SUCCESS:%d | TIME_MS:%f | SIZE:%zu\n",
-               operation_count, success, elapsed_ms, table->size);
+        #ifdef _WIN32
+            printf("OP:%llu | SUCCESS:%d | TIME_MS:%f | SIZE:%zu\n",
+                operation_count, success, elapsed_ms, ht_get_size(table));
+        #else
+            printf("OP:%lu | SUCCESS:%d | TIME_MS:%f | SIZE:%zu\n",
+                operation_count, success, elapsed_ms, ht_get_size(table));
+        #endif
 
         operation_count++;
     }
 
-    /* Clean up memory to ensure Valgrind doesn't report false positives */
     free(buffer);
     buffer = NULL;
 

@@ -13,6 +13,13 @@ CFLAGS = -Wall -Wextra -g3 -O0 -I./include
 # Use 'make sanitize' to build with these active.
 SAN_FLAGS = -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 
+# Detect Operating System to link Windows-specific cryptographic libraries
+ifeq ($(OS),Windows_NT)
+    LDFLAGS = -lbcrypt
+else
+    LDFLAGS = 
+endif
+
 # =========================================================================
 # DIRECTORY MAPPING
 # =========================================================================
@@ -42,15 +49,19 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 
 # Build Fuzzer Target (Links CW Hash Table and Carter-Wegman Hasher)
 fuzzer: prepare $(OBJ_DIR)/hash_table_cw.o $(OBJ_DIR)/carter_wegman.o
-	$(CC) $(CFLAGS) $(OBJ_DIR)/hash_table_cw.o $(OBJ_DIR)/carter_wegman.o $(TEST_DIR)/fuzzer_target.c -o $(BIN_DIR)/$@
+	$(CC) $(CFLAGS) $(OBJ_DIR)/hash_table_cw.o $(OBJ_DIR)/carter_wegman.o $(TEST_DIR)/fuzzer_target.c -o $(BIN_DIR)/$@ $(LDFLAGS)
+
+# Build Unit Test for Hash Table with Double Hashing (Baseline)
+test_ht_dh: prepare $(OBJ_DIR)/hash_table_dh.o
+	$(CC) $(CFLAGS) $(OBJ_DIR)/hash_table_dh.o $(TEST_DIR)/unit/test_hash_table_dh.c -o $(BIN_DIR)/$@
 
 # Build Unit Test for Carter-Wegman
 test_cw: prepare $(OBJ_DIR)/carter_wegman.o
-	$(CC) $(CFLAGS) $(OBJ_DIR)/carter_wegman.o $(TEST_DIR)/unit/test_carter_wegman.c -o $(BIN_DIR)/$@
+	$(CC) $(CFLAGS) $(OBJ_DIR)/carter_wegman.o $(TEST_DIR)/unit/test_carter_wegman.c -o $(BIN_DIR)/$@ $(LDFLAGS)
 
-# Build Unit Test for Double Hashing (Baseline)
-test_dh: prepare $(OBJ_DIR)/hash_table_dh.o
-	$(CC) $(CFLAGS) $(OBJ_DIR)/hash_table_dh.o $(TEST_DIR)/unit/test_hash_table_dh.c -o $(BIN_DIR)/$@
+# Build Unit Test for Hash Table with Carter Wegman
+test_ht_dh: prepare $(OBJ_DIR)/hash_table_cw.o
+	$(CC) $(CFLAGS) $(OBJ_DIR)/hash_table_cw.o $(TEST_DIR)/unit/test_hash_table_cw.c -o $(BIN_DIR)/$@ $(LDFLAGS)
 
 # Build Memory Harnesses for Valgrind
 memory_tests: prepare $(OBJ_DIR)/hash_table_dh.o $(OBJ_DIR)/hash_table_cw.o $(OBJ_DIR)/carter_wegman.o

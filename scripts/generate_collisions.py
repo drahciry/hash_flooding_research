@@ -1,6 +1,6 @@
 import itertools
 
-FILENAME = "../results/collisions.txt"
+FILENAME = "./results/collisions.txt"
 
 def gerar_colisoes(file_name: str = FILENAME) -> None:
     file_name = FILENAME

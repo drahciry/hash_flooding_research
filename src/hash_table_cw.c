@@ -103,6 +103,20 @@ static bool rehash(HashTable* hash_table) {
 /* PUBLIC API IMPLEMENTATIONS                                                */
 /* ========================================================================= */
 
+void ht_destroy(HashTable* hash_table) {
+    if (hash_table) {
+        // Delegate hashing context destruction to its own API
+        cw_destroy(hash_table->hasher);
+        
+        // Destroy internal nodes
+        buckets_destroy(hash_table);
+        
+        // Destroy the bucket array and the table itself
+        free(hash_table->buckets);
+        free(hash_table);
+    }
+}
+
 HashTable* ht_create(size_t initial_capacity) {
     HashTable* hash_table = (HashTable*)malloc(sizeof(struct HashTable));
     if (!hash_table) return NULL;
@@ -125,20 +139,6 @@ HashTable* ht_create(size_t initial_capacity) {
     }
 
     return hash_table;
-}
-
-void ht_destroy(HashTable* hash_table) {
-    if (hash_table) {
-        // Delegate hashing context destruction to its own API
-        cw_destroy(hash_table->hasher);
-        
-        // Destroy internal nodes
-        buckets_destroy(hash_table);
-        
-        // Destroy the bucket array and the table itself
-        free(hash_table->buckets);
-        free(hash_table);
-    }
 }
 
 bool insertItem(HashTable* hash_table, const char* key, int64_t item) {
@@ -246,4 +246,9 @@ bool getItem(HashTable* hash_table, const char* key, int64_t* out_item) {
     }
 
     return false;
+}
+
+size_t ht_get_size(const HashTable* hash_table) {
+    if (!hash_table) return 0;
+    return hash_table->size;
 }
