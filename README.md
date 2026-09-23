@@ -1,15 +1,15 @@
-# Hash Flooding Attack
+# Hash Flooding Vulnerability Research
 
 ## Overview
-This repository contains an architectural research project and Proof of Concept (PoC) focused on **Hash Flooding**, a classic Denial of Service (DoS) vulnerability. The project explores how deterministic hash table implementations can be maliciously manipulated to degrade algorithmic performance from $O(1)$ to $O(n)$, causing severe CPU exhaustion.
+This repository contains an architectural research project and Proof of Concept (PoC) focused on **Hash Flooding**, an algorithmic complexity vulnerability that leads to Denial of Service (DoS). The research investigates how deterministic hash table implementations can be maliciously manipulated to degrade algorithmic performance from $O(1)$ to $O(n)$, causing severe CPU exhaustion.
 
-After establishing a vulnerable baseline using Double Hashing, the research implements a robust cryptographic mitigation using **Carter-Wegman Universal Hashing**, effectively shielding the data structure against predictable collision generation.
+The core objective of this project is to analyze the mechanics of the vulnerability using a baseline implementation (Double Hashing with `djb2`), and subsequently explore and implement cryptographic mitigations. Current mitigation research includes **Carter-Wegman Universal Hashing**, with future iterations planned to incorporate **SipHash**.
 
 ## Repository Architecture
 To ensure memory safety and maintain a modular, production-ready codebase, the repository is strictly divided:
 
 * `include/`: Public API headers. Utilizes opaque pointers to enforce strict memory encapsulation and hide internal cryptographic states.
-* `src/`: Core C implementations of the algorithms, memory management, and entropy generation.
+* `src/`: Core C implementations of the hash tables, mitigation algorithms, memory management, and entropy generation.
 * `docs/`: In-depth theoretical research, mathematical modeling, and memory auditing logs.
 * `tests/`: Fuzzing harnesses and memory stress-testing endpoints designed for Valgrind profiling.
 * `scripts/`: Python-based offensive tooling for payload generation and automated fuzzing orchestration.
@@ -34,11 +34,13 @@ This project utilizes a `Makefile` to automate compilation with strict security 
 For a deep dive into the mathematical foundation and technical engineering of each research phase, please refer to the detailed reports located in the `docs/` directory.
 
 ## References & Bibliography
-The theoretical foundation and vulnerability mechanics explored in this repository were based on the following publications and disclosures:
+The theoretical foundation and vulnerability mechanics explored in this repository are based on the following publications and resources:
 
 1. **O. Yigit.** "Hash Functions." York University. http://www.cse.yorku.ca/~oz/hash.html (accessed Apr. 2026).
 2. **Crosby, S. A., & Wallach, Dan S. (2003).** *Denial of Service via Algorithmic Complexity Attacks*. USENIX Security Symposium.
 3. **Carter, J. L., & Wegman, M. N. (1979).** *Universal Classes of Hash Functions*. Journal of Computer and System Sciences, 18(2), 143-154.
+
+*(Future reading planned: Aumasson, J.-P., & Bernstein, D. J. (2012). SipHash: a fast short-input PRF. Progress in Cryptology – INDOCRYPT 2012.)*
 
 ## Acknowledgments & Authorship
 The core architecture, algorithms, and security implementations in this repository were authored entirely by me. Large Language Models (Google Gemini) were utilized strictly as writing assistants to format, standardize, and translate the Doxygen code comments and Markdown documentation into professional English.
