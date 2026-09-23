@@ -1,4 +1,4 @@
-# Hash Flooding Attack and Universal Hashing Mitigation
+# Hash Flooding Attack
 
 ## Overview
 This repository contains an architectural research project and Proof of Concept (PoC) focused on **Hash Flooding**, a classic Denial of Service (DoS) vulnerability. The project explores how deterministic hash table implementations can be maliciously manipulated to degrade algorithmic performance from $O(1)$ to $O(n)$, causing severe CPU exhaustion.
