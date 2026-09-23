@@ -33,5 +33,12 @@ This project utilizes a `Makefile` to automate compilation with strict security 
 ## Detailed Documentation
 For a deep dive into the mathematical foundation and technical engineering of each research phase, please refer to the detailed reports located in the `docs/` directory.
 
+## References & Bibliography
+The theoretical foundation and vulnerability mechanics explored in this repository were based on the following publications and disclosures:
+
+1. **O. Yigit.** "Hash Functions." York University. http://www.cse.yorku.ca/~oz/hash.html (accessed Apr. 2026).
+2. **Crosby, S. A., & Wallach, Dan S. (2003).** *Denial of Service via Algorithmic Complexity Attacks*. USENIX Security Symposium.
+3. **Carter, J. L., & Wegman, M. N. (1979).** *Universal Classes of Hash Functions*. Journal of Computer and System Sciences, 18(2), 143-154.
+
 ## Acknowledgments & Authorship
 The core architecture, algorithms, and security implementations in this repository were authored entirely by me. Large Language Models (Google Gemini) were utilized strictly as writing assistants to format, standardize, and translate the Doxygen code comments and Markdown documentation into professional English.
